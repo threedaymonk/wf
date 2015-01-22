@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 export TZ=Etc/UTC
-MOUNT_DIRS="/mnt /media"
-WORKFLOW_DIR="$HOME/Pictures/Workflow"
+MOUNT_DIRS="${MEDIA_DIRS:-/mnt:/media}"
+WORKFLOW_DIR="${WORKFLOW_DIR:-$HOME/Pictures/Workflow}"
 
 datestamp() {
   local file="$1"
@@ -26,25 +26,32 @@ fs_datestamp() {
   stat --dereference --format=%y "$1" | awk '{print $1}'
 }
 
+import_one() {
+  local original="$1"
+  local dest_dir="$WORKFLOW_DIR/original/$(datestamp "$original")"
+  local name="$(basename "$original")"
+  mkdir -p "$dest_dir"
+  if ! [ -e "$dest_dir/$name" ]; then
+    echo "$original => $dest_dir/$name"
+    cp "$original" "$dest_dir/$name.tmp"
+    mv "$dest_dir/$name.tmp" "$dest_dir/$name"
+  fi
+}
+
 import_originals() {
-  for mount_dir in $MOUNT_DIRS; do
-    if [ -d "$mount_dir" ]; then
-      pushd "$mount_dir" >/dev/null
-      for original in */**/DCIM/*/*.{NEF,JPG,MOV}; do
-        if [ -f "$original" ]; then
-          local dest_dir="$WORKFLOW_DIR/original/$(datestamp "$original")"
-          local name="$(basename "$original")"
-          mkdir -p "$dest_dir"
-          if ! [ -e "$dest_dir/$name" ]; then
-            echo "$original => $dest_dir/$name"
-            cp "$original" "$dest_dir/$name.tmp"
-            mv "$dest_dir/$name.tmp" "$dest_dir/$name"
-          fi
-        fi
-      done
-      popd >/dev/null
+  echo $1
+  local mount_dir="$1"
+  for original in "$mount_dir"/**/DCIM/**/*.{NEF,JPG,MOV}; do
+    if [ -f "$original" ]; then
+      import_one "$original"
     fi
   done
 }
 
-import_originals
+IFS=:
+for mount_dir in $MOUNT_DIRS; do
+  unset IFS
+  if [ -d "$mount_dir" ]; then
+    import_originals "$mount_dir"
+  fi
+done
