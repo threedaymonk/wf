@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+WORKFLOW_DIR="$HOME/Pictures/Workflow"
+
+CPUS="$(grep ^processor /proc/cpuinfo | wc -l)"
+THREADS="$(echo "$CPUS - 1" | bc)"
+NEF_PREVIEWER="$(dirname "$0")/wf-generate-nef-preview"
+
+parallel -j "$THREADS" "$NEF_PREVIEWER" -- $WORKFLOW_DIR/original/**/*.NEF
