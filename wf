@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+shopt -s globstar
+export TZ=Etc/UTC
+
+MOUNT_DIRS="${MEDIA_DIRS:-/mnt:/media}"
+WORKFLOW_DIR="${WORKFLOW_DIR:-$HOME/Pictures/Workflow}"
+CONVERT_OPTIONS=(-auto-orient -resize 1024x1024 -quality 85)
+CPUS="$(grep -c ^processor /proc/cpuinfo)"
+THREADS="$(echo "$CPUS - 1" | bc)"
+
+datestamp() {
+  local file="$1"
+  local datestamp="$(metadata_datestamp "$file")"
+
+  if [ "$datestamp" = "" ]; then
+    fs_datestamp "$file"
+  else
+    echo "$datestamp"
+  fi
+}
+
+metadata_datestamp() {
+  exiv2 "$1" 2>/dev/null \
+    | grep 'Image timestamp' \
+    | awk '{print $4}' \
+    | sed 's/:/-/g'
+}
+
+fs_datestamp() {
+  stat --dereference --format=%y "$1" | awk '{print $1}'
+}
+
+import_one() {
+  local original="$1"
+  local dest_dir="$WORKFLOW_DIR/original/$(datestamp "$original")"
+  local name="$(basename "$original")"
+  mkdir -p "$dest_dir"
+  if ! [ -e "$dest_dir/$name" ]; then
+    echo "$original => $dest_dir/$name"
+    cp "$original" "$dest_dir/$name.tmp"
+    mv "$dest_dir/$name.tmp" "$dest_dir/$name"
+  fi
+}
+
+import_originals() {
+  IFS=:
+  for mount_dir in $MOUNT_DIRS; do
+    if [ -d "$mount_dir" ]; then
+      for original in $mount_dir/**/DCIM/**/*.{NEF,JPG,MOV}; do
+        unset IFS
+        if [ -f "$original" ]; then
+          import_one "$original"
+        fi
+      done
+    fi
+  done
+}
+
+generate_preview() {
+  local input="$1"
+
+  if ! [ -f "$1" ]; then
+    return
+  fi
+
+  local extension="$(echo "$input" | grep -Eio '\.[^\.]+$')"
+  local outdir="$(readlink -f "$(dirname "$input")" | sed 's/original/previews/')"
+  local output="$outdir/$(basename --suffix="$extension" "$input").jpg"
+
+  if [ -e "$output" ]; then
+    return
+  fi
+
+  mkdir -p "$outdir"
+  echo "$input -> $output"
+
+  temp_output="${output}.tmp.jpg"
+
+  case "$extension" in
+    .NEF)
+      generate_nef_preview "$input" "$temp_output"
+      ;;
+    .JPG)
+      generate_jpg_preview "$input" "$temp_output"
+      ;;
+    *)
+      echo "Can't generate preview for $extension"
+      return
+      ;;
+  esac
+
+  mv "$temp_output" "$output"
+}
+
+generate_nef_preview() {
+  local input="$1"
+  local output="$2"
+
+  ufraw-batch --overwrite --output=- "$input" 2>/dev/null \
+    | convert - "${CONVERT_OPTIONS[@]}" "$output"
+}
+
+generate_jpg_preview() {
+  local input="$1"
+  local output="$2"
+  
+  convert "$input" "${CONVERT_OPTIONS[@]}" "$output"
+}
+
+generate_previews() {
+  parallel -j "$THREADS" "$0" preview-single-file -- "$WORKFLOW_DIR"/original/**/*
+}
+
+case "$1" in
+  import|i)
+    import_originals
+    ;;
+  preview|p)
+    generate_previews
+    ;;
+  preview-single-file)
+    generate_preview "$2"
+    ;;
+  "")
+    import_originals
+    generate_previews
+    ;;
+  *)
+    echo "Unknown directive $1"
+    ;;
+esac
