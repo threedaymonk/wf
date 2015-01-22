@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+shopt -s globstar
 
 export TZ=Etc/UTC
 MOUNT_DIRS="${MEDIA_DIRS:-/mnt:/media}"
@@ -39,9 +40,10 @@ import_one() {
 }
 
 import_originals() {
-  echo $1
   local mount_dir="$1"
-  for original in "$mount_dir"/**/DCIM/**/*.{NEF,JPG,MOV}; do
+  IFS=:
+  for original in $mount_dir/**/DCIM/**/*.{NEF,JPG,MOV}; do
+    unset IFS
     if [ -f "$original" ]; then
       import_one "$original"
     fi
