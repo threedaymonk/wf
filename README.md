@@ -16,6 +16,7 @@ Image processing is performed in parallel to speed things up.
 * exiv2
 * ufraw-batch
 * GNU parallel
+* ffmpeg
 
 ## Supported input types
 
@@ -26,11 +27,10 @@ The extension type is limited to those below, and case is significant.
 * Nikon raw (.NEF)
 
 It should be straightforward to add support for other raw formats supported by
-ufraw.
+ufraw and for any video format supported by ffmpeg.
 
 ## Limitations
 
-* Preview stills are not yet generated for video files
 * Only Nikon raw files supported
 * Some Linux-specific code (e.g. calculating number of processors)
 

@@ -83,6 +83,9 @@ generate_preview() {
     .JPG)
       generate_jpg_preview "$input" "$temp_output"
       ;;
+    .MOV)
+      generate_video_preview "$input" "$temp_output"
+      ;;
     *)
       echo "Can't generate preview for $extension"
       return
@@ -105,6 +108,16 @@ generate_jpg_preview() {
   local output="$2"
   
   convert "$input" "${CONVERT_OPTIONS[@]}" "$output"
+}
+
+generate_video_preview() {
+  local input="$1"
+  local output="$2"
+
+  ffmpeg -i "$input" -vcodec ppm -vframes 1 -an -f rawvideo -y - 2>/dev/null \
+    | convert - "${CONVERT_OPTIONS[@]}" \
+              -fill black -undercolor white -gravity South -annotate +0+5 \
+              " Video " "$output"
 }
 
 generate_previews() {
