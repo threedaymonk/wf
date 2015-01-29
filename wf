@@ -8,6 +8,9 @@ CONVERT_OPTIONS=(-auto-orient -resize 1024x1024 -quality 85)
 CPUS="$(grep -c ^processor /proc/cpuinfo)"
 THREADS="$(echo "$CPUS - 1" | bc)"
 
+# Print a YYYY-MM-DD datestamp for a file in $1, using metadata if available,
+# or the modification timstamp if not.
+#
 datestamp() {
   local file="$1"
   local datestamp="$(metadata_datestamp "$file")"
@@ -19,6 +22,9 @@ datestamp() {
   fi
 }
 
+# Print the YYYY-MM-DD datestamp of the file in $1 from its metadata, or "" if
+# not available.
+#
 metadata_datestamp() {
   exiv2 "$1" 2>/dev/null \
     | grep 'Image timestamp' \
@@ -26,10 +32,15 @@ metadata_datestamp() {
     | sed 's/:/-/g'
 }
 
+# Print the YYYY-MM-DD modification time of the file in $1.
+#
 fs_datestamp() {
   stat --dereference --format=%y "$1" | awk '{print $1}'
 }
 
+# Import a single file $1 into a directory in $WORKFLOW_DIR/original based on
+# its date (creating the directory if necessary).
+#
 import_one() {
   local original="$1"
   local dest_dir="$WORKFLOW_DIR/original/$(datestamp "$original")"
@@ -42,6 +53,8 @@ import_one() {
   fi
 }
 
+# Import all source images and videos found in $MOUNT_DIRS.
+#
 import_originals() {
   IFS=:
   for mount_dir in $MOUNT_DIRS; do
@@ -56,6 +69,9 @@ import_originals() {
   done
 }
 
+# Generate the preview image for the file $1. Assumes that $1 contains the full
+# path to the original, incluing the /original/ directory component.
+#
 generate_preview() {
   local input="$1"
 
@@ -95,6 +111,8 @@ generate_preview() {
   mv "$temp_output" "$output"
 }
 
+# Generate a preview image for $1 as $2 using ufraw.
+#
 generate_nef_preview() {
   local input="$1"
   local output="$2"
@@ -103,6 +121,8 @@ generate_nef_preview() {
     | convert - "${CONVERT_OPTIONS[@]}" "$output"
 }
 
+# Generate a preview image for $1 as $2 using ImageMagick.
+#
 generate_jpg_preview() {
   local input="$1"
   local output="$2"
@@ -110,6 +130,9 @@ generate_jpg_preview() {
   convert "$input" "${CONVERT_OPTIONS[@]}" "$output"
 }
 
+# Generate a preview image for $1 as $2. Uses ffmpeg to extract the first frame
+# and ImageMagick to add a "Video" caption to the preview.
+#
 generate_video_preview() {
   local input="$1"
   local output="$2"
@@ -120,10 +143,16 @@ generate_video_preview() {
               " Video " "$output"
 }
 
+# Generate previews for all images in $WORKFLOW_DIR/originals and put them
+# under corresponding dated directories in $WORKFLOW_DIR/previews. Existing
+# previews are not replaced.
+#
 generate_previews() {
   parallel -j "$THREADS" "$0" preview-single-file -- "$WORKFLOW_DIR"/original/**/*
 }
 
+# Handle command-line and dispatch accordingly.
+#
 case "$1" in
   import|i)
     import_originals
@@ -132,6 +161,8 @@ case "$1" in
     generate_previews
     ;;
   preview-single-file)
+    # This is used internally in generate_previews to facilitate parallel
+    # processing using GNU parallel.
     generate_preview "$2"
     ;;
   "")
