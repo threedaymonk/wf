@@ -36,7 +36,7 @@ import_one() {
   local name="$(basename "$original")"
   mkdir -p "$dest_dir"
   if ! [ -e "$dest_dir/$name" ]; then
-    echo "$original => $dest_dir/$name"
+    echo "Import $original => $dest_dir/$name"
     cp "$original" "$dest_dir/$name.tmp"
     mv "$dest_dir/$name.tmp" "$dest_dir/$name"
   fi
@@ -72,7 +72,7 @@ generate_preview() {
   fi
 
   mkdir -p "$outdir"
-  echo "$input -> $output"
+  echo "Preview $input => $output"
 
   temp_output="${output}.tmp.jpg"
 
