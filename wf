@@ -94,10 +94,10 @@ generate_preview() {
 
   case "$extension" in
     .NEF)
-      generate_nef_preview "$input" "$temp_output"
+      generate_raw_preview "$input" "$temp_output"
       ;;
     .JPG)
-      generate_jpg_preview "$input" "$temp_output"
+      generate_image_preview "$input" "$temp_output"
       ;;
     .MOV)
       generate_video_preview "$input" "$temp_output"
@@ -113,7 +113,7 @@ generate_preview() {
 
 # Generate a preview image for $1 as $2 using ufraw.
 #
-generate_nef_preview() {
+generate_raw_preview() {
   local input="$1"
   local output="$2"
 
@@ -123,7 +123,7 @@ generate_nef_preview() {
 
 # Generate a preview image for $1 as $2 using ImageMagick.
 #
-generate_jpg_preview() {
+generate_image_preview() {
   local input="$1"
   local output="$2"
   
