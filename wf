@@ -148,7 +148,7 @@ generate_video_preview() {
 # previews are not replaced.
 #
 generate_previews() {
-  parallel -j "$THREADS" "$0" preview-single-file -- "$WORKFLOW_DIR"/original/**/*
+  parallel -j "$THREADS" "$0" preview-single-file ::: "$WORKFLOW_DIR"/original/**/*
 }
 
 # Handle command-line and dispatch accordingly.
